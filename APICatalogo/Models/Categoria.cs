@@ -4,6 +4,7 @@ using System.Collections.ObjectModel;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 using System.Linq;
+using System.Text.Json.Serialization;
 using System.Threading.Tasks;
 
 namespace APICatalogo.Models
@@ -24,6 +25,7 @@ namespace APICatalogo.Models
         [Required]
         [MaxLength(300)]
         public String ImagemUrl { get; set; }
+        [JsonIgnore]
         public ICollection<Produto> Produtos { get; set; }
 
     }
