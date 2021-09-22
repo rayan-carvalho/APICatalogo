@@ -25,7 +25,7 @@ namespace APICatalogo.Models
         [Required]
         [MaxLength(300)]
         public String ImagemUrl { get; set; }
-        [JsonIgnore]
+    
         public ICollection<Produto> Produtos { get; set; }
 
     }

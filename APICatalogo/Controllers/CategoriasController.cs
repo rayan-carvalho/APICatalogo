@@ -1,5 +1,6 @@
 ﻿using APICatalogo.Context;
 using APICatalogo.Models;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using System;
@@ -29,40 +30,70 @@ namespace APICatalogo.Controllers
         [HttpGet]
         public ActionResult<IEnumerable<Categoria>> Get()
         {
-            return _context.Categorias.ToList();
-
+            try
+            {
+                return _context.Categorias.Include(x => x.Produtos).ToList();
+            }
+            catch(Exception)
+            {
+                return StatusCode(StatusCodes.Status500InternalServerError, "Erro ao obter as categorias do banco de dados");
+            }        
+            
         }
+
         [HttpGet("{id}", Name = "ObterCategoria")]
         public ActionResult<Categoria> Get(int id)
         {
-            var categoria = _context.Categorias.FirstOrDefault(p => p.Id == id);
-            if (categoria == null)
+
+            try
             {
-                return NotFound();
+                var categoria = _context.Categorias.Include(c => c.Produtos).FirstOrDefault(p => p.Id == id);
+                if (categoria == null)
+                {
+                    return NotFound($"A categoria com id={id} não foi encontrada");
+                }
+                return categoria;
             }
-            return categoria;
+            catch
+            {
+                return StatusCode(StatusCodes.Status500InternalServerError, "Erro ao obter as categoria do banco de dados");
+            }         
         }
 
         [HttpPost]
         public ActionResult Post([FromBody] Categoria categoria)
         {
-            _context.Categorias.Add(categoria);
-            _context.SaveChanges();
 
-            return new CreatedAtRouteResult("ObterCategoria", new { id = categoria.Id }, categoria);
+            try
+            {
+                _context.Categorias.Add(categoria);
+                _context.SaveChanges();
+                return new CreatedAtRouteResult("ObterCategoria", new { id = categoria.Id }, categoria);
+            }
+            catch
+            {
+                return StatusCode(StatusCodes.Status500InternalServerError, "Erro ao tentar criar uma nova categoria");
+            }            
         }
 
         [HttpPut("{id}")]
         public ActionResult Put(int id, [FromBody] Categoria categoria)
         {
-            if (id != categoria.Id)
-            {
-                return BadRequest();
-            }
 
-            _context.Entry(categoria).State = EntityState.Modified;
-            _context.SaveChanges();
-            return Ok();
+            try{
+
+                if (id != categoria.Id)
+                {
+                    return BadRequest($"Não foi possível atualizar a categoria com id={id}");
+                }
+                _context.Entry(categoria).State = EntityState.Modified;
+                _context.SaveChanges();
+                return Ok();
+            }
+            catch
+            {
+                return StatusCode(StatusCodes.Status500InternalServerError, $"Erro ao tentar atualizar categoria com id={id}");
+            }         
 
         }
 
@@ -70,16 +101,25 @@ namespace APICatalogo.Controllers
 
         public ActionResult<Categoria> Delete(int id)
         {
-            var categoria = _context.Categorias.Find(id);
 
-            if (categoria == null)
+            try
             {
-                return NotFound();
-            }
+                var categoria = _context.Categorias.Find(id);
 
-            _context.Categorias.Remove(categoria);
-            _context.SaveChanges();
-            return categoria;
+                if (categoria == null)
+                {
+                    return NotFound($"A categoria com id={id} não foi encontrada");
+                }
+
+                _context.Categorias.Remove(categoria);
+                _context.SaveChanges();
+                return categoria;
+
+            }
+            catch
+            {
+                return StatusCode(StatusCodes.Status500InternalServerError, $"Erro ao excluir a categoria com id={id}");
+            }           
         }
 
     }

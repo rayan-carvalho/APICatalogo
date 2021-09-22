@@ -18,16 +18,17 @@ namespace APICatalogo.Controllers
         {
             _context = contexto;
         }
-        [HttpGet]
-        public ActionResult<IEnumerable<Produto>> Get()
-        {
-            return _context.Produtos.ToList();
 
-        }
-        [HttpGet("{id}", Name = "ObterProduto")]
-        public ActionResult<Produto> Get(int id)
+        [HttpGet]
+        public async Task<ActionResult<IEnumerable<Produto>>> Get()
         {
-            var produto = _context.Produtos.FirstOrDefault(p => p.Id == id);
+            return await _context.Produtos.ToListAsync();
+        }
+
+        [HttpGet("{id:int:min(1)}", Name = "ObterProduto")]
+        public async Task<ActionResult<Produto>> Get(int id)
+        {
+            var produto = await _context.Produtos.FirstOrDefaultAsync(p => p.Id == id);
             if(produto == null)
             {
                 return NotFound();
@@ -54,12 +55,12 @@ namespace APICatalogo.Controllers
 
             _context.Entry(produto).State = EntityState.Modified;
             _context.SaveChanges();
+
             return Ok();
 
         }
 
         [HttpDelete("{id}")]
-
         public ActionResult<Produto>Delete(int id)
         {
             var produto = _context.Produtos.Find(id);
@@ -71,6 +72,7 @@ namespace APICatalogo.Controllers
 
             _context.Produtos.Remove(produto);
             _context.SaveChanges();
+
             return produto;
         }
 
