@@ -1,7 +1,5 @@
-﻿using APICatalogo.Context;
-using System;
-using System.Collections.Generic;
-using System.Linq;
+﻿using ApiCatalogo.Repository;
+using APICatalogo.Context;
 using System.Threading.Tasks;
 
 namespace APICatalogo.Repository
@@ -29,14 +27,14 @@ namespace APICatalogo.Repository
         {
             get
             {
-                return _categoriaRepo = _categoriaRepo ?? new CategoriaReposity(_context);
+                return _categoriaRepo = _categoriaRepo ?? new CategoriaRepository(_context);
             }
         
         }
 
-        public void Commit()
+        public async Task Commit()
         {
-            _context.SaveChanges();
+            await _context.SaveChangesAsync();
         }
              
 

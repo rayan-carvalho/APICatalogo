@@ -1,126 +1,120 @@
-﻿using APICatalogo.Context;
+﻿using APICatalogo.DTOs;
 using APICatalogo.Models;
-using Microsoft.AspNetCore.Http;
+using APICatalogo.Pagination;
+using APICatalogo.Repository;
+using AutoMapper;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
-using System;
+using Newtonsoft.Json;
 using System.Collections.Generic;
-using System.Linq;
 using System.Threading.Tasks;
 
-namespace APICatalogo.Controllers
+namespace ApiCatalogo.Controllers
 {
     [Route("api/[Controller]")]
     [ApiController]
     public class CategoriasController : ControllerBase
     {
-        private readonly AppDbContext _context;
-        public CategoriasController(AppDbContext contexto)
+        private readonly IUnitOfWork _context;
+        private readonly IMapper _mapper;
+        public CategoriasController(IUnitOfWork contexto, IMapper mapper)
         {
             _context = contexto;
+            _mapper = mapper;
         }
 
         [HttpGet("produtos")]
-        public ActionResult<IEnumerable<Categoria>> GetCategoriasProdutos()
+        public async Task<ActionResult<IEnumerable<CategoriaDTO>>> GetCategoriasProdutos()
         {
-            return _context.Categorias.Include(x=> x.Produtos).ToList();
+            var categorias = await _context.CategoriaRepository
+                            .GetCategoriasProdutos();
 
+            var categoriasDto = _mapper.Map<List<CategoriaDTO>>(categorias);
+            return categoriasDto;
         }
 
         [HttpGet]
-        public ActionResult<IEnumerable<Categoria>> Get()
+        public async Task<ActionResult<IEnumerable<CategoriaDTO>>>
+            Get([FromQuery] CategoriasParameters categoriasParameters)
         {
-            try
+            var categorias = await _context.CategoriaRepository.
+                                GetCategorias(categoriasParameters);
+
+            var metadata = new
             {
-                return _context.Categorias.Include(x => x.Produtos).ToList();
-            }
-            catch(Exception)
-            {
-                return StatusCode(StatusCodes.Status500InternalServerError, "Erro ao obter as categorias do banco de dados");
-            }        
-            
+                categorias.TotalCount,
+                categorias.PageSize,
+                categorias.CurrentPage,
+                categorias.TotalPages,
+                categorias.HasNext,
+                categorias.HasPrevious
+            };
+
+            Response.Headers.Add("X-Pagination", JsonConvert.SerializeObject(metadata));
+
+            var categoriasDto = _mapper.Map<List<CategoriaDTO>>(categorias);
+            return categoriasDto;
         }
 
         [HttpGet("{id}", Name = "ObterCategoria")]
-        public ActionResult<Categoria> Get(int id)
+        public async Task<ActionResult<CategoriaDTO>> Get(int id)
         {
+            var categoria = await _context.CategoriaRepository
+                             .GetById(p => p.Id == id);
 
-            try
+            if (categoria == null)
             {
-                var categoria = _context.Categorias.Include(c => c.Produtos).FirstOrDefault(p => p.Id == id);
-                if (categoria == null)
-                {
-                    return NotFound($"A categoria com id={id} não foi encontrada");
-                }
-                return categoria;
+                return NotFound();
             }
-            catch
-            {
-                return StatusCode(StatusCodes.Status500InternalServerError, "Erro ao obter as categoria do banco de dados");
-            }         
+            var categoriaDto = _mapper.Map<CategoriaDTO>(categoria);
+            return categoriaDto;
         }
 
         [HttpPost]
-        public ActionResult Post([FromBody] Categoria categoria)
+        public async Task<ActionResult> Post([FromBody] CategoriaDTO categoriaDto)
         {
+            var categoria = _mapper.Map<Categoria>(categoriaDto);
 
-            try
-            {
-                _context.Categorias.Add(categoria);
-                _context.SaveChanges();
-                return new CreatedAtRouteResult("ObterCategoria", new { id = categoria.Id }, categoria);
-            }
-            catch
-            {
-                return StatusCode(StatusCodes.Status500InternalServerError, "Erro ao tentar criar uma nova categoria");
-            }            
+            _context.CategoriaRepository.Add(categoria);
+            await _context.Commit();
+
+            var categoriaDTO = _mapper.Map<CategoriaDTO>(categoria);
+
+            return new CreatedAtRouteResult("ObterCategoria",
+                new { id = categoria.Id }, categoriaDTO);
         }
 
         [HttpPut("{id}")]
-        public ActionResult Put(int id, [FromBody] Categoria categoria)
+        public async Task<ActionResult> Put(int id, [FromBody] CategoriaDTO categoriaDto)
         {
-
-            try{
-
-                if (id != categoria.Id)
-                {
-                    return BadRequest($"Não foi possível atualizar a categoria com id={id}");
-                }
-                _context.Entry(categoria).State = EntityState.Modified;
-                _context.SaveChanges();
-                return Ok();
-            }
-            catch
+            if (id != categoriaDto.Id)
             {
-                return StatusCode(StatusCodes.Status500InternalServerError, $"Erro ao tentar atualizar categoria com id={id}");
-            }         
+                return BadRequest();
+            }
 
+            var categoria = _mapper.Map<Categoria>(categoriaDto);
+
+            _context.CategoriaRepository.Update(categoria);
+            await _context.Commit();
+            return Ok();
         }
 
         [HttpDelete("{id}")]
-
-        public ActionResult<Categoria> Delete(int id)
+        public async Task<ActionResult<CategoriaDTO>> Delete(int id)
         {
+            var categoria = await _context.CategoriaRepository
+                            .GetById(p => p.Id == id);
 
-            try
+            if (categoria == null)
             {
-                var categoria = _context.Categorias.Find(id);
-
-                if (categoria == null)
-                {
-                    return NotFound($"A categoria com id={id} não foi encontrada");
-                }
-
-                _context.Categorias.Remove(categoria);
-                _context.SaveChanges();
-                return categoria;
-
+                return NotFound();
             }
-            catch
-            {
-                return StatusCode(StatusCodes.Status500InternalServerError, $"Erro ao excluir a categoria com id={id}");
-            }           
-        }
+            _context.CategoriaRepository.Delete(categoria);
+            await _context.Commit();
 
+            var categoriaDto = _mapper.Map<CategoriaDTO>(categoria);
+
+            return categoriaDto;
+        }
     }
 }
+

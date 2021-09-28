@@ -1,11 +1,16 @@
-﻿using APICatalogo.Models;
+﻿using ApiCatalogo.Pagination;
+using APICatalogo.Models;
+using APICatalogo.Pagination;
+using APICatalogo.Repository;
 using System.Collections.Generic;
+using System.Threading.Tasks;
 
-namespace APICatalogo.Repository
+namespace ApiCatalogo.Repository
 {
     public interface IProdutoRepository : IRepository<Produto>
     {
-        IEnumerable<Produto> GetProdutosPorPreco();
+        Task<PagedList<Produto>>GetProdutos(ProdutosParameters produtosParameters);
 
+        Task<IEnumerable<Produto>> GetProdutosPorPreco();
     }
 }
